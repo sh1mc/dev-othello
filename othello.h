@@ -7,24 +7,29 @@
 #define CANVAS_WIDTH (BOARD_SIZE * 4 + 2) // contains '\n'
 
 typedef enum {
-    BLACK, WHITE, NONE,
+  BLACK,
+  WHITE,
+  NONE,
 } State;
 
 typedef enum {
-    GET_CURRENT_TURN, GET_INFO, SET_CURRENT_TURN, RESET_GAME
+  GET_CURRENT_TURN,
+  GET_INFO,
+  SET_CURRENT_TURN,
+  RESET_GAME
 } Command;
 
 typedef struct {
-    State board[BOARD_SIZE][BOARD_SIZE];
+  State board[BOARD_SIZE][BOARD_SIZE];
 } Board;
 
 typedef struct {
-    Board *state;
-    bool turn;
+  Board *state;
+  bool turn;
 } Othello;
 
 typedef struct {
-    char canvas[CANVAS_HEIGHT][CANVAS_WIDTH];
+  char canvas[CANVAS_HEIGHT][CANVAS_WIDTH];
 } Canvas;
 
 void *xmalloc(size_t size, gfp_t gfptype);
@@ -45,7 +50,6 @@ State get_state_Othello(Othello *othello, size_t x, size_t y);
 void draw(void);
 int reverse_num(size_t x, size_t y, bool turn);
 void reverse(Board *board, size_t x, size_t y, bool turn);
-
 
 void board_write(int offset);
 bool writable(size_t x, size_t y, bool turn);

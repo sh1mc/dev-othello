@@ -5,8 +5,8 @@
 ```
 export KERN_DIR=/path/to/kernel/src/root
 ```
-1. Build the module with `make`.
-1. Insert the module with `insmod`.
+2. Build the module with `make`.
+3. Insert the module with `insmod`.
 
 ## How to play
 - The path of the othello device is /dev/othello.

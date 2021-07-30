@@ -10,3 +10,4 @@
 *.order
 mnt/*
 .cache/*
+compile_commands.json

@@ -10,4 +10,4 @@ default:
 	$(MAKE) -C $(KERN_DIR) M=$(PWD) modules
 
 clean:
-	rm -f *.o *.ko
+	rm -f *.o *.ko *.mod *.mod.c Module.symvers modules.order

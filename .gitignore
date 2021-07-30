@@ -1,0 +1,12 @@
+*.o
+*.ko
+*.mod
+*.mod.c
+*.cmd
+*.o.d
+*.symvers
+.editorconfig
+.vscode
+*.order
+mnt/*
+.cache/*

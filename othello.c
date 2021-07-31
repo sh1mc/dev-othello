@@ -4,6 +4,7 @@
 #define MODVERSIONS
 #endif
 
+#include "libothello.h"
 #include "othello.h"
 #include <asm/errno.h>
 #include <asm/uaccess.h>
@@ -121,7 +122,6 @@ State get_state_Othello(Othello *othello, size_t x, size_t y) {
 }
 
 static int __init othello_init(void) {
-  const size_t center = BOARD_SIZE / 2;
   Major = misc_register(&mdev);
   write_buffer_num = 0;
   if (Major < 0) {
@@ -129,19 +129,7 @@ static int __init othello_init(void) {
     return Major;
   }
   printk(KERN_INFO "Assigned %s (%d).\n", DEVICE_NAME, Major);
-  if (othello != NULL) {
-    free_Othello(othello);
-  }
-  if (canvas != NULL) {
-    free_Canvas(canvas);
-  }
-  othello = new_Othello();
-  canvas = new_Canvas();
-  set_state_Othello(othello, center, center, BLACK);
-  set_state_Othello(othello, center - 1, center - 1, BLACK);
-  set_state_Othello(othello, center - 1, center, WHITE);
-  set_state_Othello(othello, center, center - 1, WHITE);
-  draw();
+  reset_game();
   return 0;
 }
 
@@ -181,7 +169,7 @@ void draw() {
       board_x = j / 4;
       if (j % 4 == 2 && get_state_Othello(othello, board_x, board_y) != NONE) {
         canvas->canvas[i][j] =
-            get_state_Othello(othello, board_x, board_y) == WHITE ? 'O' : '@';
+            get_state_Othello(othello, board_x, board_y) == LIGHT ? 'O' : '@';
         continue;
       }
       canvas->canvas[i][j] = ' ';
@@ -215,23 +203,22 @@ static ssize_t othello_write(struct file *file, const char *buf, size_t length,
     return -EFAULT;
   }
   kbuf[length] = '\0';
-  printk(KERN_INFO "kbuf: %s\n", kbuf);
   for (i = 0; i < length; i++) {
     if ((loff_t)i > length) {
       printk(KERN_ERR "Out of buffer range.\n");
       kfree(kbuf);
     }
     if (kbuf[i] == 'O' || kbuf[i] == '@') {
-      State disk = (kbuf[i] == 'O' ? WHITE : BLACK);
-      if ((disk == WHITE) == othello->turn) {
+      State disk = (kbuf[i] == 'O' ? LIGHT : DARK);
+      if ((disk == LIGHT) == othello->turn) {
         board_write(write_buffer_num);
       }
     }
-	if (kbuf[i] == '\0' || kbuf[i] == '\n') {
-		write_buffer_num = 0;
-		break;
-	}
-	write_buffer_num++;
+    if (kbuf[i] == '\0' || kbuf[i] == '\n') {
+      write_buffer_num = 0;
+      break;
+    }
+    write_buffer_num++;
   }
   kfree(kbuf);
   *offset += length;
@@ -320,26 +307,53 @@ int count(State state) {
 
 static long othello_command(struct file *file, unsigned int code,
                             unsigned long data) {
-  int black_num, white_num;
-  switch ((Command)code) {
+  CommandData *command_data = (CommandData *)data;
+  Command command = (Command)code;
+  switch (command) {
   case GET_CURRENT_TURN:
-    printk(KERN_INFO "%s\n", (othello->turn == BLACK ? "BLACK" : "WHITE"));
-    break;
-  case GET_INFO:
-    black_num = count(BLACK);
-    white_num = count(WHITE);
-    printk(KERN_INFO "BLACK: %d\nWHITE:%d\n", black_num, white_num);
-    break;
+    return get_current_turn();
   case SET_CURRENT_TURN:
-    if ((State)data == BLACK || (State)data == WHITE) {
-      othello->turn = (State)data;
-    }
-    break;
+    return set_current_turn(command_data->turn);
+  case SET_BOARD_STATE:
+    return set_board_state(command_data->board_x, command_data->board_y,
+                           command_data->state);
   case RESET_GAME:
-    printk(KERN_INFO "Under Construction\n");
-    break;
-  default:
-    break;
+    return reset_game();
   }
   return 0;
 }
+
+long get_current_turn(void) { return othello->turn; }
+
+long set_current_turn(bool turn) {
+  othello->turn = turn;
+  return 0;
+}
+
+long set_board_state(int x, int y, State state) {
+  if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE) {
+    printk(KERN_ERR "set_board_state: out of range.\n");
+    return -EFAULT;
+  }
+  othello->state->board[x][y] = state;
+  return 0;
+}
+
+long reset_game(void) {
+  const size_t center = BOARD_SIZE / 2;
+  if (othello != NULL) {
+    free_Othello(othello);
+  }
+  if (canvas != NULL) {
+    free_Canvas(canvas);
+  }
+  othello = new_Othello();
+  canvas = new_Canvas();
+  set_state_Othello(othello, center, center, LIGHT);
+  set_state_Othello(othello, center - 1, center - 1, LIGHT);
+  set_state_Othello(othello, center - 1, center, DARK);
+  set_state_Othello(othello, center, center - 1, DARK);
+  draw();
+  return 0;
+}
+

@@ -1,23 +1,11 @@
 #ifndef OTHELLO_H
 #include <linux/kernel.h>
 #include <linux/slab.h>
+#include "libothello.h"
 
 #define BOARD_SIZE 8
 #define CANVAS_HEIGHT (BOARD_SIZE * 2 + 1)
 #define CANVAS_WIDTH (BOARD_SIZE * 4 + 2) // contains '\n'
-
-typedef enum {
-  BLACK,
-  WHITE,
-  NONE,
-} State;
-
-typedef enum {
-  GET_CURRENT_TURN,
-  GET_INFO,
-  SET_CURRENT_TURN,
-  RESET_GAME
-} Command;
 
 typedef struct {
   State board[BOARD_SIZE][BOARD_SIZE];
@@ -53,6 +41,11 @@ void reverse(Board *board, size_t x, size_t y, bool turn);
 
 void board_write(int offset);
 bool writable(size_t x, size_t y, bool turn);
+
+long get_current_turn(void);
+long set_current_turn(bool turn);
+long set_board_state(int x, int y, State state);
+long reset_game(void);
 
 extern Othello *othello;
 extern Canvas *canvas;

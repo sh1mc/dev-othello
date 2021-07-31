@@ -15,8 +15,8 @@ export KERN_DIR=/path/to/kernel/src/root
 - `@` IS A DARK DISK.
 
 ## Tips
-- For example, to put a dark disk on 19th (3-D) position, execute:
+- For example, to put a light disk on 20th (3-E) position, execute:
 ```
-yes " " | head -n 19 | tr -d '\n' | sed -e 's/$/@\n/' > /dev/othello
+yes " " | head -n 20 | tr -d '\n' | sed -e 's/$/O\n/' > /dev/othello
 ```
 

@@ -1,3 +1,4 @@
+#include "linux/uaccess.h"
 #if defined(CONFIG_MODVERSIONS) && !defined(MODVERSIONS)
 #include <linux/modversions.h>
 #define MODVERSIONS
@@ -31,6 +32,7 @@ module_exit(othello_exit);
 #define BUF_LEN 80
 
 static int Major;
+static int write_buffer_num;
 
 const struct file_operations fops = {.read = othello_read,
                                      .write = othello_write,
@@ -121,6 +123,7 @@ State get_state_Othello(Othello *othello, size_t x, size_t y) {
 static int __init othello_init(void) {
   const size_t center = BOARD_SIZE / 2;
   Major = misc_register(&mdev);
+  write_buffer_num = 0;
   if (Major < 0) {
     printk(KERN_ERR "Registering %s failed.\n", DEVICE_NAME);
     return Major;
@@ -194,14 +197,9 @@ static ssize_t othello_read(struct file *file, char *buf, size_t length,
     return 0;
   draw();
   for (i = (long long)(*offset); i < (long long)(*offset) + length; i++) {
-    printk("i = %lld\n", i);
-    if (i == (size_t)(CANVAS_HEIGHT * CANVAS_WIDTH)) {
-      *(buf++) = '\0';
+    if (i >= (size_t)(CANVAS_HEIGHT * CANVAS_WIDTH))
       break;
-    }
-    if (i > (size_t)(CANVAS_HEIGHT * CANVAS_WIDTH))
-      break;
-    *(buf++) = canvas->canvas[i / CANVAS_WIDTH][i % CANVAS_WIDTH];
+    put_user(canvas->canvas[i / CANVAS_WIDTH][i % CANVAS_WIDTH], buf++);
     bytes_read++;
   }
   *offset += bytes_read;
@@ -210,17 +208,34 @@ static ssize_t othello_read(struct file *file, char *buf, size_t length,
 
 static ssize_t othello_write(struct file *file, const char *buf, size_t length,
                              loff_t *offset) {
-  if (length < 1)
-    return 0;
-  if (buf[0] == '\0')
-    return 0;
-  if (buf[0] == 'O' || buf[0] == '@') {
-    State disk = (buf[0] == 'O' ? WHITE : BLACK);
-    if ((disk == WHITE) == othello->turn) {
-      board_write(*offset);
-    }
+  int i;
+  char *kbuf = xmalloc(sizeof(char) * (length + 1), GFP_KERNEL);
+  if (copy_from_user(kbuf, buf, length) != 0) {
+    printk(KERN_ERR "Read buffer failed.\n");
+    return -EFAULT;
   }
-  return 1;
+  kbuf[length] = '\0';
+  printk(KERN_INFO "kbuf: %s\n", kbuf);
+  for (i = 0; i < length; i++) {
+    if ((loff_t)i > length) {
+      printk(KERN_ERR "Out of buffer range.\n");
+      kfree(kbuf);
+    }
+    if (kbuf[i] == 'O' || kbuf[i] == '@') {
+      State disk = (kbuf[i] == 'O' ? WHITE : BLACK);
+      if ((disk == WHITE) == othello->turn) {
+        board_write(write_buffer_num);
+      }
+    }
+	if (kbuf[i] == '\0' || kbuf[i] == '\n') {
+		write_buffer_num = 0;
+		break;
+	}
+	write_buffer_num++;
+  }
+  kfree(kbuf);
+  *offset += length;
+  return length;
 }
 
 static const int DIRECTION[8][2] = {{0, 1},  {0, -1}, {1, 0},  {1, 1},

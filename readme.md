@@ -1,4 +1,4 @@
-# dev-othello kernel module for Linux
+# dev-othello Linux kernel module
 
 ## How to build
 1. Set your environment variable as following:

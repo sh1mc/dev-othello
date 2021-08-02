@@ -207,11 +207,12 @@ static ssize_t othello_write(struct file *file, const char *buf, size_t length,
     if ((loff_t)i > length) {
       printk(KERN_ERR "Out of buffer range.\n");
       kfree(kbuf);
+	  return 0;
     }
     if (kbuf[i] == 'O' || kbuf[i] == '@') {
       State disk = (kbuf[i] == 'O' ? LIGHT : DARK);
       if ((disk == LIGHT) == othello->turn) {
-        board_write(write_buffer_num);
+        board_write(write_buffer_num + 1);
       }
     }
     if (kbuf[i] == '\0' || kbuf[i] == '\n') {
